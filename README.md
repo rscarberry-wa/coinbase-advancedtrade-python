@@ -10,6 +10,15 @@ This is the unofficial Python client for the Coinbase Advanced Trade API. It all
 - Supports all endpoints and methods provided by the official API
 - Added support for trading strategies covered on the [YouTube channel](https://rhett.blog/youtube)
 
+## Merging Latest from Upstream
+
+```base
+git remote add upstream <URL of original repo - only done once>
+git fetch upstream
+git merge upstream/<branch_name>
+git push origin <branch_name>
+```
+
 ## Setup
 
 1. Install the package using pip:
