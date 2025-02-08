@@ -1,5 +1,6 @@
 *.DS_Store
 .idea
+.layers
 *.pyc
 example.py
 build/
