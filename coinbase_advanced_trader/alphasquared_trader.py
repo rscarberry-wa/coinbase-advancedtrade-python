@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class StrategyRecommendation:
     action: str
     value: Decimal
-    nearest_risk: float
+    nearest_risk: Decimal
     balance: Decimal
 
 class AlphaSquaredTrader:
@@ -124,20 +124,20 @@ class AlphaSquaredTrader:
             if past_order is not None and past_order.action == "buy":
                 if ((datetime.now() - past_order.timestamp).days >= 7 or
                         (past_order.nearest_risk - nearest_risk >= 5 and not math.isclose(buy_value, past_order.value, abs_tol=1e-3))):
-                    return StrategyRecommendation("buy", Decimal(buy_value), nearest_risk, Decimal(0))
+                    return StrategyRecommendation("buy", Decimal(buy_value), Decimal(nearest_risk), Decimal(0))
             else:
-                return StrategyRecommendation("buy", Decimal(buy_value), nearest_risk, Decimal(0))
+                return StrategyRecommendation("buy", Decimal(buy_value), Decimal(nearest_risk), Decimal(0))
         elif sell_value > buy_value:
             if past_order is not None and past_order.action == "sell":
                 if nearest_risk - past_order.nearest_risk >= 5:
                     amount_to_sell = (Decimal(past_order.balance) * Decimal(sell_value) / Decimal('100'))
-                    return StrategyRecommendation("sell", amount_to_sell, nearest_risk, Decimal(past_order.balance))
+                    return StrategyRecommendation("sell", amount_to_sell, Decimal(nearest_risk), Decimal(past_order.balance))
                 else:
                     return None
             else:
                 balance = Decimal(self.coinbase_client.get_crypto_balance(asset))
                 amount_to_sell = (balance * Decimal(sell_value) / Decimal('100'))
-                return StrategyRecommendation("sell", amount_to_sell, nearest_risk, balance)
+                return StrategyRecommendation("sell", amount_to_sell, Decimal(nearest_risk), balance)
         else:
             return None
 
@@ -147,8 +147,8 @@ class AlphaSquaredTrader:
                          action=recommendation.action,
                          order_id=order.id,
                          nearest_risk=recommendation.nearest_risk,
-                         value=float(recommendation.value),
-                         balance=float(recommendation.balance),
+                         value=recommendation.value,
+                         balance=recommendation.balance,
                          status=order.status)
 
     def _empty_or_zero(self, s: str) -> bool:
