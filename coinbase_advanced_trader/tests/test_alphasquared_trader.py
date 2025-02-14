@@ -326,9 +326,9 @@ class TestAlphaSquaredTrader(unittest.TestCase):
         assert past_order.strategy_name == 'eth_mod_100'
         assert past_order.action == 'sell'
         assert past_order.order_id == '456'
-        assert past_order.nearest_risk == 60.0
-        assert past_order.value == 0.1
-        assert past_order.balance == 1.0
+        assert past_order.nearest_risk == Decimal('60.0')
+        assert past_order.value == Decimal('0.1')
+        assert past_order.balance == Decimal('1.0')
         assert past_order.status == 'pending'
 
     def test_execute_multiple_buys_and_sells_no_delays_between(self):
