@@ -1,0 +1,20 @@
+from coinbase.rest import RESTClient
+
+from demos.auth import creds
+from coinbase_advanced_trader import EnhancedRESTClient
+
+import json
+
+# {'order_id': '084ae298-9092-4cac-942d-49986f277376', 'product_id': 'ETH-USD', 'user_id': '8de5bffe-e1f2-53ef-a929-25ce2b7bc054', 'order_configuration': {'limit_limit_gtc': {'base_size': '0.03254787', 'limit_price': '2701.62', 'post_only': False, 'rfq_disabled': False}}, 'side': 'BUY', 'client_order_id': '0d5c12ea-7ef0-4f51-a3e0-698ed9dce343', 'status': 'FILLED', 'time_in_force': 'GOOD_UNTIL_CANCELLED', 'created_time': '2025-02-11T11:40:57.668433Z', 'completion_percentage': '100.00', 'filled_size': '0.03254787', 'average_filled_price': '2701.62', 'fee': '', 'number_of_fills': '1', 'filled_value': '87.9319765494', 'pending_cancel': False, 'size_in_quote': False, 'total_fees': '0.5275918592964', 'size_inclusive_of_fees': False, 'total_value_after_fees': '88.4595684086964', 'trigger_status': 'INVALID_ORDER_TYPE', 'order_type': 'LIMIT', 'reject_reason': 'REJECT_REASON_UNSPECIFIED', 'settled': True, 'product_type': 'SPOT', 'reject_message': '', 'cancel_message': '', 'order_placement_source': 'RETAIL_ADVANCED', 'outstanding_hold_amount': '0', 'is_liquidation': False, 'last_fill_time': '2025-02-11T11:41:03.095686Z', 'edit_history': [], 'leverage': '', 'margin_type': 'UNKNOWN_MARGIN_TYPE', 'retail_portfolio_id': '8de5bffe-e1f2-53ef-a929-25ce2b7bc054', 'originating_order_id': '', 'attached_order_id': '', 'attached_order_configuration': None}
+# {'order_id': 'e5a0b394-b52f-4429-9486-3f97b98c8e04', 'product_id': 'BTC-USD', 'user_id': '8de5bffe-e1f2-53ef-a929-25ce2b7bc054', 'order_configuration': {'limit_limit_gtc': {'base_size': '0.00060467', 'limit_price': '98036.58', 'post_only': False, 'rfq_disabled': False}}, 'side': 'BUY', 'client_order_id': '9b964848-067f-408b-a7ea-bacc15c8496d', 'status': 'FILLED', 'time_in_force': 'GOOD_UNTIL_CANCELLED', 'created_time': '2025-02-11T11:39:33.775826Z', 'completion_percentage': '100.00', 'filled_size': '0.00060467', 'average_filled_price': '98036.58', 'fee': '', 'number_of_fills': '1', 'filled_value': '59.2797788286', 'pending_cancel': False, 'size_in_quote': False, 'total_fees': '0.3556786729716', 'size_inclusive_of_fees': False, 'total_value_after_fees': '59.6354575015716', 'trigger_status': 'INVALID_ORDER_TYPE', 'order_type': 'LIMIT', 'reject_reason': 'REJECT_REASON_UNSPECIFIED', 'settled': True, 'product_type': 'SPOT', 'reject_message': '', 'cancel_message': '', 'order_placement_source': 'RETAIL_ADVANCED', 'outstanding_hold_amount': '0', 'is_liquidation': False, 'last_fill_time': '2025-02-11T11:39:56.311336Z', 'edit_history': [], 'leverage': '', 'margin_type': 'UNKNOWN_MARGIN_TYPE', 'retail_portfolio_id': '8de5bffe-e1f2-53ef-a929-25ce2b7bc054', 'originating_order_id': '', 'attached_order_id': '', 'attached_order_configuration': None}
+
+if __name__ == '__main__':
+    creds = creds.decrypt_creds()
+    coinbase_rest_client = EnhancedRESTClient(creds['ca_api_key'], creds['ca_secret'])
+    orders = coinbase_rest_client.list_orders()['orders']
+    for order in orders:
+        print(order)
+
+
+
+
