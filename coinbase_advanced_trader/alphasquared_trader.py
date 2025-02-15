@@ -6,7 +6,7 @@ from alphasquared import AlphaSquared
 from coinbase_advanced_trader.models import Order, PastOrder
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional, Tuple
 
 from .models.past_order import PastOrder
 
@@ -117,24 +117,27 @@ class AlphaSquaredTrader:
         buy_values = strategy_values.get("buy_values", {})
         sell_values = strategy_values.get("sell_values", {})
 
-        risk_levels = sorted(set([int(k.split('_')[1]) for k in buy_values.keys() if not self._empty_or_zero(buy_values[k])] +
-                                 [int(k.split('_')[1]) for k in sell_values.keys() if not self._empty_or_zero(sell_values[k])]))
+        buy_tuples = self._transform_to_tuples(buy_values)
+        sell_tuples = self._transform_to_tuples(sell_values)
+
+        risk_levels = sorted(set([r for r, v in buy_tuples] + [r for r, v in sell_tuples]))
 
         nearest_risk = max([r for r in risk_levels if r <= risk], default=min(risk_levels))
 
-        buy_value = float(buy_values.get(f"risk_{nearest_risk}", "0") or 0)
-        sell_value = float(sell_values.get(f"risk_{nearest_risk}", "0") or 0)
+        buy_value = float(buy_values.get(f"risk_{nearest_risk:.0f}", "0") or 0)
+        sell_value = float(sell_values.get(f"risk_{nearest_risk:.0f}", "0") or 0)
 
         if buy_value > sell_value:
             if past_order is not None and past_order.action == "buy":
                 if ((datetime.now() - past_order.timestamp).days >= 7 or
-                        (past_order.nearest_risk - nearest_risk >= 5 and not math.isclose(buy_value, past_order.value, abs_tol=1e-3))):
+                        (float(past_order.nearest_risk) - nearest_risk >= 5 and
+                         not math.isclose(buy_value, float(past_order.value), abs_tol=1e-3))):
                     return StrategyRecommendation("buy", Decimal(buy_value), Decimal(nearest_risk), Decimal(0))
             else:
                 return StrategyRecommendation("buy", Decimal(buy_value), Decimal(nearest_risk), Decimal(0))
         elif sell_value > buy_value:
             if past_order is not None and past_order.action == "sell":
-                if nearest_risk - past_order.nearest_risk >= 5:
+                if nearest_risk - float(past_order.nearest_risk) >= 5:
                     amount_to_sell = (Decimal(past_order.balance) * Decimal(sell_value) / Decimal('100'))
                     return StrategyRecommendation("sell", amount_to_sell, Decimal(nearest_risk), Decimal(past_order.balance))
                 else:
@@ -156,5 +159,24 @@ class AlphaSquaredTrader:
                          balance=recommendation.balance,
                          status=order.status)
 
-    def _empty_or_zero(self, s: str) -> bool:
-        return not s or s == "0"
+    def _transform_to_tuples(self, data: dict) -> List[Tuple[float, float]]:
+        # Step 1: Extract and convert the data into tuples
+        tuples = []
+        for key, value in data.items():
+            if value:  # Exclude empty values
+                risk_value = float(key.split('_')[1])  # Extract the numeric part of the key
+                value_float = float(value)  # Convert the value to float
+                tuples.append((risk_value, value_float))
+
+        # Step 2: Sort by the first value (risk_value)
+        tuples.sort(key=lambda x: x[0])  # Sort by the first element in each tuple as a float
+
+        # Step 3: Remove duplicates based on the second value
+        result = []
+        prev_value = None
+        for t in tuples:
+            if t[1] != prev_value:  # Check if the second value is the same as the previous
+                result.append(t)
+                prev_value = t[1]
+
+        return result
