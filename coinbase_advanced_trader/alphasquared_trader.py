@@ -24,7 +24,8 @@ class AlphaSquaredTrader:
         self.coinbase_client = coinbase_client
         self.alphasquared_client = alphasquared_client
 
-    def execute_strategy(self, product_id: str, strategy_name: str, past_order: Optional[PastOrder] = None):
+    def execute_strategy(self, product_id: str, strategy_name: str,
+                         past_order: Optional[PastOrder] = None, dry_run: bool = False):
         try:
             asset, base_currency = product_id.split('-')
             
@@ -37,6 +38,9 @@ class AlphaSquaredTrader:
                 return None
 
             logger.info(f"Strategy suggests: Action = {recommendation.action.upper()}, Value = {recommendation.value}")
+            if dry_run:
+                logger.info("No action taken due to dry run.")
+                return None
 
             if recommendation.action.lower() == 'buy':
                 order = self._execute_buy(product_id, recommendation.value)
