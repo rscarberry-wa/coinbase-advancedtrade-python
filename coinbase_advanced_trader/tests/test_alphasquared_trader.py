@@ -1,11 +1,10 @@
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 from decimal import Decimal
 from coinbase_advanced_trader.alphasquared_trader import AlphaSquaredTrader
 from coinbase_advanced_trader.models import Order, OrderSide, OrderType
 from coinbase_advanced_trader.models.past_order import PastOrder
 from datetime import datetime, timedelta
-
 
 class TestAlphaSquaredTrader(unittest.TestCase):
 
@@ -282,7 +281,7 @@ class TestAlphaSquaredTrader(unittest.TestCase):
 
         self.mock_alphasquared_client.get_current_risk.assert_called_once_with('ETH')
         self.mock_alphasquared_client.get_strategy_values.assert_called_once_with('eth_mod_100')
-        self.mock_coinbase_client.fiat_limit_buy.assert_called_once_with('ETH-USD', '89', price_multiplier='0.995')
+        self.mock_coinbase_client.fiat_limit_buy.assert_called_once_with('ETH-USD', '89', price_multiplier=0.995)
 
         assert past_order is not None
         assert past_order.strategy_name == 'eth_mod_100'
