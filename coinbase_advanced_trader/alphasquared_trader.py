@@ -56,7 +56,7 @@ class AlphaSquaredTrader:
 
     def _execute_buy(self, product_id: str, value: Decimal) -> Optional[Order]:
         try:
-            order = self.coinbase_client.fiat_limit_buy(product_id, str(value), price_multiplier="0.995")
+            order = self.coinbase_client.fiat_limit_buy(product_id, str(value), price_multiplier=0.995)
             if isinstance(order, Order):
                 logger.info(f"Buy limit order placed: ID={order.id}, Size={order.size}, Price={order.price}")
                 return order
@@ -106,6 +106,7 @@ class AlphaSquaredTrader:
 
         :param strategy_name: The name of the strategy
         :param risk: The risk level (0-100, can be float)
+        :param past_order: The past order object, if any, to consider for the recommendation
         :return: A optional StrategyRecommendation object, None, for no recommendation or an error
         """
         strategy_values = self.alphasquared_client.get_strategy_values(strategy_name)
