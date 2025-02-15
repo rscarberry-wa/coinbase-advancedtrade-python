@@ -107,6 +107,6 @@ if __name__ == '__main__':
     creds = creds.decrypt_creds()
     alphasquared = AlphaSquared(api_token=creds['as_token'])
     # Has to be one of your defined strategies
-    strategy = "sol_mod_100"
+    strategy = "link_cons_100"
     strategy_values = alphasquared.get_strategy_values(strategy)
     print(json.dumps(strategy_values, indent=4))

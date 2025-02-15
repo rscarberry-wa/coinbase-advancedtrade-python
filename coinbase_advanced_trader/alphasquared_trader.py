@@ -60,6 +60,11 @@ class AlphaSquaredTrader:
 
     def _execute_buy(self, product_id: str, value: Decimal) -> Optional[Order]:
         try:
+            currency = product_id.split('-')[1]
+            currency_balance = Decimal(self.coinbase_client.get_crypto_balance(currency))
+            if currency_balance < value:
+                logger.warning(f"Insufficient {currency} balance. Required: {value}, Available: {currency_balance}")
+                return None
             order = self.coinbase_client.fiat_limit_buy(product_id, str(value), price_multiplier=0.995)
             if isinstance(order, Order):
                 logger.info(f"Buy limit order placed: ID={order.id}, Size={order.size}, Price={order.price}")

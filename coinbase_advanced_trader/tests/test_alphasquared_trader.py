@@ -344,11 +344,13 @@ class TestAlphaSquaredTrader(unittest.TestCase):
         )
 
         self.mock_coinbase_client.fiat_limit_buy.return_value = mock_order
+        self.mock_coinbase_client.get_crypto_balance.return_value = '10000.'
 
         past_order = self.trader.execute_strategy('ETH-USD', 'eth_mod_100')
 
         self.mock_alphasquared_client.get_current_risk.assert_called_once_with('ETH')
         self.mock_alphasquared_client.get_strategy_values.assert_called_once_with('eth_mod_100')
+        self.mock_coinbase_client.get_crypto_balance.assert_called_once_with('USD')
         self.mock_coinbase_client.fiat_limit_buy.assert_called_once_with('ETH-USD', '89', price_multiplier=0.995)
 
         assert past_order is not None
@@ -359,6 +361,19 @@ class TestAlphaSquaredTrader(unittest.TestCase):
         assert past_order.value == 89.0
         assert past_order.balance == 0.0
         assert past_order.status == 'pending'
+
+    def test_execute_strategy_buy_with_insufficient_funds(self):
+        self.mock_alphasquared_client.get_current_risk.return_value = 30
+        self.mock_alphasquared_client.get_strategy_values.return_value = self.strategy_values_eth_mod_100
+        self.mock_coinbase_client.get_crypto_balance.return_value = '80.'
+
+        past_order = self.trader.execute_strategy('ETH-USD', 'eth_mod_100')
+
+        self.mock_alphasquared_client.get_current_risk.assert_called_once_with('ETH')
+        self.mock_alphasquared_client.get_strategy_values.assert_called_once_with('eth_mod_100')
+        self.mock_coinbase_client.get_crypto_balance.assert_called_once_with('USD')
+
+        assert past_order is None
 
     def test_execute_strategy_sell(self):
         self.mock_alphasquared_client.get_current_risk.return_value = 61.
