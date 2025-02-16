@@ -1,16 +1,20 @@
-from decimal import Decimal, ROUND_DOWN
 import logging
 import math
-from .enhanced_rest_client import EnhancedRESTClient
-from alphasquared import AlphaSquared
-from coinbase_advanced_trader.models import Order, PastOrder
 from dataclasses import dataclass
 from datetime import datetime
-from typing import List, Optional, Tuple
+from decimal import Decimal, ROUND_DOWN
+from typing import Dict, Optional, Tuple
 
+from alphasquared import AlphaSquared
+
+from coinbase_advanced_trader.models import Order
+from coinbase_advanced_trader.utils import (FloatRange, generate_buy_ranges,
+                                            generate_sell_ranges, find_range_item)
+from .enhanced_rest_client import EnhancedRESTClient
 from .models.past_order import PastOrder
 
 logger = logging.getLogger(__name__)
+
 
 @dataclass
 class StrategyRecommendation:
@@ -18,6 +22,7 @@ class StrategyRecommendation:
     value: Decimal
     nearest_risk: Decimal
     balance: Decimal
+
 
 class AlphaSquaredTrader:
     def __init__(self, coinbase_client: EnhancedRESTClient, alphasquared_client: AlphaSquared):
@@ -28,7 +33,7 @@ class AlphaSquaredTrader:
                          past_order: Optional[PastOrder] = None, dry_run: bool = False):
         try:
             asset, base_currency = product_id.split('-')
-            
+
             current_risk = self.alphasquared_client.get_current_risk(asset)
             logger.info(f"Current {asset} Risk: {current_risk}")
 
@@ -80,7 +85,7 @@ class AlphaSquaredTrader:
     def _execute_sell(self, product_id, asset, base_currency, value):
         balance = Decimal(self.coinbase_client.get_crypto_balance(asset))
         logger.info(f"Current {asset} balance: {balance}")
-        
+
         product_details = self.coinbase_client.get_product(product_id)
         base_increment = Decimal(product_details['base_increment'])
         quote_increment = Decimal(product_details['quote_increment'])
@@ -92,7 +97,7 @@ class AlphaSquaredTrader:
 
         if sell_amount > base_increment:
             limit_price = (current_price * Decimal('1.005')).quantize(quote_increment, rounding=ROUND_DOWN)
-            
+
             order = self.coinbase_client.limit_order_gtc_sell(
                 client_order_id=self.coinbase_client._order_service._generate_client_order_id(),
                 product_id=product_id,
@@ -100,16 +105,19 @@ class AlphaSquaredTrader:
                 limit_price=str(limit_price)
             )
             if isinstance(order, Order):
-                logger.info(f"Sell limit order placed for {sell_amount} {asset} at {limit_price} {base_currency}: {order}")
+                logger.info(
+                    f"Sell limit order placed for {sell_amount} {asset} at {limit_price} {base_currency}: {order}")
                 return order
             else:
                 logger.warning(f"Unexpected order response type: {type(order)}")
                 return None
         else:
-            logger.info(f"Sell amount {sell_amount} {asset} is too small. Minimum allowed is {base_increment}. No order placed.")
+            logger.info(
+                f"Sell amount {sell_amount} {asset} is too small. Minimum allowed is {base_increment}. No order placed.")
             return None
 
-    def get_strategy_recommendation(self, asset: str, strategy_name: str, risk: float, past_order: Optional[PastOrder]) -> Optional[StrategyRecommendation]:
+    def get_strategy_recommendation(self, asset: str, strategy_name: str, risk: float,
+                                    past_order: Optional[PastOrder]) -> Optional[StrategyRecommendation]:
         """
         Get the strategy recommendation for a specific strategy and risk level
 
@@ -122,35 +130,40 @@ class AlphaSquaredTrader:
         buy_values = strategy_values.get("buy_values", {})
         sell_values = strategy_values.get("sell_values", {})
 
-        buy_tuples = self._transform_to_tuples(buy_values)
-        sell_tuples = self._transform_to_tuples(sell_values)
+        buy_ranges = generate_buy_ranges(buy_values)
+        sell_ranges = generate_sell_ranges(sell_values)
 
-        risk_levels = sorted(set([r for r, v in buy_tuples] + [r for r, v in sell_tuples]))
+        buy_tuple = find_range_item(risk, buy_ranges)
+        sell_tuple = find_range_item(risk, sell_ranges)
 
-        nearest_risk = max([r for r in risk_levels if r <= risk], default=min(risk_levels))
-
-        buy_value = float(buy_values.get(f"risk_{nearest_risk:.0f}", "0") or 0)
-        sell_value = float(sell_values.get(f"risk_{nearest_risk:.0f}", "0") or 0)
+        buy_value = buy_tuple[1] if buy_tuple else 0
+        sell_value = sell_tuple[1] if sell_tuple else 0
 
         if buy_value > sell_value:
-            if past_order is not None and past_order.action == "buy":
-                if ((datetime.now() - past_order.timestamp).days >= 7 or
-                        (float(past_order.nearest_risk) - nearest_risk >= 5 and
-                         not math.isclose(buy_value, float(past_order.value), abs_tol=1e-3))):
-                    return StrategyRecommendation("buy", Decimal(buy_value), Decimal(nearest_risk), Decimal(0))
-            else:
-                return StrategyRecommendation("buy", Decimal(buy_value), Decimal(nearest_risk), Decimal(0))
-        elif sell_value > buy_value:
-            if past_order is not None and past_order.action == "sell":
-                if nearest_risk - float(past_order.nearest_risk) >= 5:
-                    amount_to_sell = (Decimal(past_order.balance) * Decimal(sell_value) / Decimal('100'))
-                    return StrategyRecommendation("sell", amount_to_sell, Decimal(nearest_risk), Decimal(past_order.balance))
+            if buy_tuple:
+                nearest_buy_risk = buy_tuple[0].start
+                if past_order is not None and past_order.action == "buy":
+                    if ((datetime.now() - past_order.timestamp).days >= 7 or (
+                            float(past_order.nearest_risk) - nearest_buy_risk >= 5 and not math.isclose(buy_value,
+                                                                                                        float(past_order.value),
+                                                                                                        abs_tol=1e-3))):
+                        return StrategyRecommendation("buy", Decimal(buy_value), Decimal(nearest_buy_risk), Decimal(0))
                 else:
-                    return None
-            else:
-                balance = Decimal(self.coinbase_client.get_crypto_balance(asset))
-                amount_to_sell = (balance * Decimal(sell_value) / Decimal('100'))
-                return StrategyRecommendation("sell", amount_to_sell, Decimal(nearest_risk), balance)
+                    return StrategyRecommendation("buy", Decimal(buy_value), Decimal(nearest_buy_risk), Decimal(0))
+        elif sell_value > buy_value:
+            if sell_tuple:
+                nearest_sell_risk = sell_tuple[0].start
+                if past_order is not None and past_order.action == "sell":
+                    if nearest_sell_risk - float(past_order.nearest_risk) >= 5:
+                        amount_to_sell = (Decimal(past_order.balance) * Decimal(sell_value) / Decimal('100'))
+                        return StrategyRecommendation("sell", amount_to_sell, Decimal(nearest_sell_risk),
+                                                      Decimal(past_order.balance))
+                    else:
+                        return None
+                else:
+                    balance = Decimal(self.coinbase_client.get_crypto_balance(asset))
+                    amount_to_sell = (balance * Decimal(sell_value) / Decimal('100'))
+                    return StrategyRecommendation("sell", amount_to_sell, Decimal(nearest_sell_risk), balance)
         else:
             return None
 
@@ -164,24 +177,3 @@ class AlphaSquaredTrader:
                          balance=recommendation.balance,
                          status=order.status)
 
-    def _transform_to_tuples(self, data: dict) -> List[Tuple[float, float]]:
-        # Step 1: Extract and convert the data into tuples
-        tuples = []
-        for key, value in data.items():
-            if value:  # Exclude empty values
-                risk_value = float(key.split('_')[1])  # Extract the numeric part of the key
-                value_float = float(value)  # Convert the value to float
-                tuples.append((risk_value, value_float))
-
-        # Step 2: Sort by the first value (risk_value)
-        tuples.sort(key=lambda x: x[0])  # Sort by the first element in each tuple as a float
-
-        # Step 3: Remove duplicates based on the second value
-        result = []
-        prev_value = None
-        for t in tuples:
-            if t[1] != prev_value:  # Check if the second value is the same as the previous
-                result.append(t)
-                prev_value = t[1]
-
-        return result

@@ -187,7 +187,7 @@ class TestAlphaSquaredTrader(unittest.TestCase):
         self.mock_alphasquared_client.get_strategy_values.assert_called_once_with('btc_agg_100')
         assert recommendation.action == 'buy'
         assert recommendation.value == Decimal(60.0)
-        assert recommendation.nearest_risk == 55.0
+        assert recommendation.nearest_risk == 50.0
 
     # Test with same risk and strategy values, but within 7 days
     def test_get_strategy_recommendation_buy_bth2(self):
@@ -232,7 +232,7 @@ class TestAlphaSquaredTrader(unittest.TestCase):
                                                                            timestamp=datetime.now() - timedelta(days=7),
                                                                            action='buy',
                                                                            order_id="32343",
-                                                                           nearest_risk=55.0,
+                                                                           nearest_risk=50.0,
                                                                            value=60.0,
                                                                            balance=0.0,
                                                                            status="success"))
@@ -240,7 +240,7 @@ class TestAlphaSquaredTrader(unittest.TestCase):
         self.mock_alphasquared_client.get_strategy_values.assert_called_once_with('btc_agg_100')
         assert recommendation.action == 'buy'
         assert recommendation.value == Decimal(60.0)
-        assert recommendation.nearest_risk == 55.0
+        assert recommendation.nearest_risk == 50.0
 
     # Test with a higher risk that matches a higher band, and less than 7 days have passed
     def test_get_strategy_recommendation_buy_bth5(self):
@@ -268,7 +268,7 @@ class TestAlphaSquaredTrader(unittest.TestCase):
                                                                            timestamp=datetime.now() - timedelta(days=3),
                                                                            action='buy',
                                                                            order_id="32343",
-                                                                           nearest_risk=55.0,
+                                                                           nearest_risk=50.0,
                                                                            value=60.0,
                                                                            balance=0.0,
                                                                            status="success"))
@@ -276,7 +276,23 @@ class TestAlphaSquaredTrader(unittest.TestCase):
         self.mock_alphasquared_client.get_strategy_values.assert_called_once_with('btc_agg_100')
         assert recommendation.action == 'buy'
         assert recommendation.value == Decimal(80.0)
-        assert recommendation.nearest_risk == 45.0
+        assert recommendation.nearest_risk == 40.0
+
+    def test_get_strategy_recommendation_buy_bth7(self):
+        self.mock_alphasquared_client.get_strategy_values.return_value = self.strategy_values_btc_agg_100
+
+        recommendation = self.trader.get_strategy_recommendation('BTC-USDC', 'btc_agg_100', 54.9,
+                                                                 PastOrder(strategy_name='btc_agg_100',
+                                                                           timestamp=datetime.now() - timedelta(days=3),
+                                                                           action='buy',
+                                                                           order_id="32343",
+                                                                           nearest_risk=50.0,
+                                                                           value=60.0,
+                                                                           balance=0.0,
+                                                                           status="success"))
+
+        self.mock_alphasquared_client.get_strategy_values.assert_called_once_with('btc_agg_100')
+        assert recommendation is None
 
     def test_get_strategy_recommendation_sell_bth1(self):
         self.mock_alphasquared_client.get_strategy_values.return_value = self.strategy_values_btc_agg_100
@@ -351,27 +367,29 @@ class TestAlphaSquaredTrader(unittest.TestCase):
         self.mock_alphasquared_client.get_current_risk.assert_called_once_with('ETH')
         self.mock_alphasquared_client.get_strategy_values.assert_called_once_with('eth_mod_100')
         self.mock_coinbase_client.get_crypto_balance.assert_called_once_with('USD')
-        self.mock_coinbase_client.fiat_limit_buy.assert_called_once_with('ETH-USD', '89', price_multiplier=0.995)
+        self.mock_coinbase_client.fiat_limit_buy.assert_called_once_with('ETH-USD', '45', price_multiplier=0.995)
 
         assert past_order is not None
         assert past_order.strategy_name == 'eth_mod_100'
         assert past_order.action == 'buy'
         assert past_order.order_id == '123'
-        assert past_order.nearest_risk == 25
-        assert past_order.value == 89.0
+        assert past_order.nearest_risk == 30
+        assert past_order.value == 45.0
         assert past_order.balance == 0.0
         assert past_order.status == 'pending'
 
     def test_execute_strategy_buy_with_insufficient_funds(self):
         self.mock_alphasquared_client.get_current_risk.return_value = 30
         self.mock_alphasquared_client.get_strategy_values.return_value = self.strategy_values_eth_mod_100
-        self.mock_coinbase_client.get_crypto_balance.return_value = '80.'
+        self.mock_coinbase_client.get_crypto_balance.return_value = '40.'
 
         past_order = self.trader.execute_strategy('ETH-USD', 'eth_mod_100')
 
         self.mock_alphasquared_client.get_current_risk.assert_called_once_with('ETH')
         self.mock_alphasquared_client.get_strategy_values.assert_called_once_with('eth_mod_100')
         self.mock_coinbase_client.get_crypto_balance.assert_called_once_with('USD')
+        # Should have bailed before calling this.
+        self.mock_coinbase_client.fiat_limit_buy.assert_not_called()
 
         assert past_order is None
 
@@ -416,8 +434,7 @@ class TestAlphaSquaredTrader(unittest.TestCase):
     def test_execute_multiple_buys_and_sells_no_delays_between(self):
         risks = [19., 22.0, 25., 20.0, 13., 22.0, 28., 31., 44., 42., 51., 63., 70., 72., 80., 95.]
         expected_actions = {
-            0: ('buy', Decimal('134'), 15.),
-            4: ('buy', Decimal('179'), 0.),
+            0: ('buy', Decimal('134'), 10.),
             11: ('sell', Decimal('0.1'), 60.),
             12: ('sell', Decimal('0.2'), 70.),
             14: ('sell', Decimal('0.3'), 80.),
@@ -453,16 +470,14 @@ class TestAlphaSquaredTrader(unittest.TestCase):
     def test_execute_multiple_buys_and_sells_high_delays_between(self):
         risks = [19., 22.0, 25., 20.0, 13., 22.0, 28., 31., 44., 42., 51., 63., 70., 72., 80., 95.]
         expected_actions = {
-            0: ('buy', Decimal('134'), 15.),
-            1: ('buy', Decimal('134'), 15.),
-            2: ('buy', Decimal('89'), 25.),
-            3: ('buy', Decimal('134'), 15.),
-            4: ('buy', Decimal('179'), 0.),
-            5: ('buy', Decimal('134'), 15.),
-            6: ('buy', Decimal('89'), 25.),
-            7: ('buy', Decimal('89'), 25.),
-            8: ('buy', Decimal('45'), 35.),
-            9: ('buy', Decimal('45'), 35.),
+            0: ('buy', Decimal('134'), 10.),
+            1: ('buy', Decimal('89'), 20.),
+            2: ('buy', Decimal('89'), 20.),
+            3: ('buy', Decimal('89'), 20.),
+            4: ('buy', Decimal('134'), 10.),
+            5: ('buy', Decimal('89'), 20.),
+            6: ('buy', Decimal('89'), 20.),
+            7: ('buy', Decimal('45'), 30.),
             11: ('sell', Decimal('0.1'), 60.),
             12: ('sell', Decimal('0.2'), 70.),
             14: ('sell', Decimal('0.3'), 80.),
