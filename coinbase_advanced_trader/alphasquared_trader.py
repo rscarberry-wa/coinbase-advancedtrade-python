@@ -3,12 +3,12 @@ import math
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal, ROUND_DOWN
-from typing import Dict, Optional, Tuple
+from typing import Optional
 
-from alphasquared import AlphaSquared
+from coinbase_advanced_trader.alphasquared import AlphaSquared
 
 from coinbase_advanced_trader.models import Order
-from coinbase_advanced_trader.utils import (FloatRange, generate_buy_ranges,
+from coinbase_advanced_trader.utils import (generate_buy_ranges,
                                             generate_sell_ranges, find_range_item)
 from .enhanced_rest_client import EnhancedRESTClient
 from .models.past_order import PastOrder

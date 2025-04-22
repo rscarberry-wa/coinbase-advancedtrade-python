@@ -213,7 +213,7 @@ This client now includes integration with AlphaSquared, allowing you to execute 
 
 ```python
 from coinbase_advanced_trader import EnhancedRESTClient, AlphaSquaredTrader
-from alphasquared import AlphaSquared
+from coinbase_advanced_trader.alphasquared import AlphaSquared
 
 # Initialize Coinbase client
 coinbase_api_key = "YOUR_COINBASE_API_KEY"

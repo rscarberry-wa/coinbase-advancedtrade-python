@@ -1,8 +1,3 @@
-from demos.auth import creds
-from alphasquared import AlphaSquared
-import json
-
-
 def execute_stategies(strategies: dict[str, str]):
     try:
         for strategy_name, product_id in strategies.items():
