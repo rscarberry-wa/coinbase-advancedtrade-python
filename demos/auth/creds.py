@@ -102,17 +102,14 @@ def decrypt_to_dict(encrypted_file_path, password):
         print(f"Error during decryption: {e}")
         return None
 
-def encrypt_main():
+def encrypt_main(password: str):
     input_file = "../../.creds/creds.json"
-    output_file = "../../../.creds/creds.enc"
+    output_file = "../../.creds/creds.enc"
 
     # Check if the input file exists
     if not os.path.exists(input_file):
         print(f"Error: Input file '{input_file}' does not exist.")
         return
-
-    # Prompt the user for a password
-    password = input("Enter a password to encrypt the file: ")
 
     print("Encrypting the file...")
     try:
@@ -121,7 +118,7 @@ def encrypt_main():
     except Exception as e:
         print(f"Error during encryption: {e}")
 
-def decrypt_creds():
+def decrypt_creds(password: str):
     input_file = "../../.creds/creds.enc"
     # Check if the input file exists
     if not os.path.exists(input_file):
@@ -129,8 +126,12 @@ def decrypt_creds():
         return
 
     # Prompt the user for a password
-    password = getpass("Enter a password to decrypt the file: ")
     return decrypt_to_dict(input_file, password)
 
 if __name__ == "__main__":
-    print(decrypt_creds())
+    password = os.getenv("CREDS_PW")
+    if password is None:
+        password = getpass("Enter your password: ")
+    # print(encrypt_main(password))
+    print(decrypt_creds(password))
+

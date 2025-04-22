@@ -1,3 +1,6 @@
+import os
+from getpass import getpass
+
 from demos.auth import creds
 from alphasquared import AlphaSquared
 import json
@@ -35,7 +38,10 @@ import json
 # }
 
 if __name__ == '__main__':
-    creds = creds.decrypt_creds()
+    password = os.getenv("CREDS_PW")
+    if password is None:
+        password = getpass("Enter your password: ")
+    creds = creds.decrypt_creds(password=password)
     alphasquared = AlphaSquared(api_token=creds['as_token'])
     print(json.dumps(alphasquared.get_asset_info('BTC'), indent=4))
 
