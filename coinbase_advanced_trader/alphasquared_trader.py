@@ -5,7 +5,7 @@ from datetime import datetime
 from decimal import Decimal, ROUND_DOWN
 from typing import Optional
 
-from coinbase_advanced_trader.alphasquared import AlphaSquared
+from .alphasquared import AlphaSquared
 
 from coinbase_advanced_trader.models import Order
 from coinbase_advanced_trader.utils import (generate_buy_ranges,

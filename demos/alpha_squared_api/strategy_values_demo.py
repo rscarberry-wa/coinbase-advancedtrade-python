@@ -2,7 +2,7 @@ import os
 from getpass import getpass
 
 from demos.auth import creds
-from coinbase_advanced_trader.alphasquared import AlphaSquared
+from coinbase_advanced_trader import AlphaSquared
 import json
 
 if __name__ == '__main__':
