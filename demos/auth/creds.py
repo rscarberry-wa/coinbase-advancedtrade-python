@@ -132,6 +132,6 @@ if __name__ == "__main__":
     password = os.getenv("CREDS_PW")
     if password is None:
         password = getpass("Enter your password: ")
-    # print(encrypt_main(password))
-    print(decrypt_creds(password))
+    print(encrypt_main(password))
+    #print(decrypt_creds(password))
 

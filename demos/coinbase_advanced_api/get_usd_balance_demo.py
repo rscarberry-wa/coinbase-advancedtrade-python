@@ -1,9 +1,15 @@
+import os
+from getpass import getpass
+
 from demos.auth import creds
 from coinbase_advanced_trader import EnhancedRESTClient
 from decimal import Decimal
 
 if __name__ == '__main__':
-    creds = creds.decrypt_creds()
+    password = os.getenv("CREDS_PW")
+    if password is None:
+        password = getpass("Enter your password: ")
+    creds = creds.decrypt_creds(password=password)
     coinbase_rest_client = EnhancedRESTClient(creds['ca_api_key'], creds['ca_secret'])
     product_id = 'BTC-USDC'
     value = Decimal('400')
