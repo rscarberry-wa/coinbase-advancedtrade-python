@@ -7,7 +7,7 @@ from typing import Optional
 
 from .alphasquared import AlphaSquared
 
-from coinbase_advanced_trader.models import Order
+from coinbase_advanced_trader.models import Order, OrderSide, OrderType, order
 from coinbase_advanced_trader.utils import (generate_buy_ranges,
                                             generate_sell_ranges, find_range_item)
 from .enhanced_rest_client import EnhancedRESTClient
@@ -98,19 +98,35 @@ class AlphaSquaredTrader:
         if sell_amount > base_increment:
             limit_price = (current_price * Decimal('1.005')).quantize(quote_increment, rounding=ROUND_DOWN)
 
-            order = self.coinbase_client.limit_order_gtc_sell(
+            order_response = self.coinbase_client.limit_order_gtc_sell(
                 client_order_id=self.coinbase_client._order_service._generate_client_order_id(),
                 product_id=product_id,
                 base_size=str(sell_amount),
                 limit_price=str(limit_price)
             )
-            if isinstance(order, Order):
-                logger.info(
-                    f"Sell limit order placed for {sell_amount} {asset} at {limit_price} {base_currency}: {order}")
-                return order
-            else:
-                logger.warning(f"Unexpected order response type: {type(order)}")
-                return None
+
+            if not order_response['success']:
+                error_response = order_response.get('error_response', {})
+                error_message = error_response.get('message', 'Unknown error')
+                preview_failure_reason = error_response.get('preview_failure_reason', 'Unknown')
+                error_log = (f"Failed to place a limit sell order. "
+                             f"Reason: {error_message}. "
+                             f"Preview failure reason: {preview_failure_reason}")
+                logger.error(error_log)
+                raise Exception(error_log)
+
+            order = Order(
+                id=order_response['success_response']['order_id'],
+                product_id=product_id,
+                side=OrderSide.SELL,
+                type=OrderType.LIMIT,
+                size=sell_amount,
+                price=limit_price)
+
+            logger.info(f"Sell limit order placed: ID={order.id}, Size={order.size}, Price={order.price}")
+
+            return order
+
         else:
             logger.info(
                 f"Sell amount {sell_amount} {asset} is too small. Minimum allowed is {base_increment}. No order placed.")
