@@ -41,7 +41,10 @@ if [ -d "$VENV_DIR" ]; then
 fi
 
 echo "Creating a new virtual environment ($VENV_DIR) using Python 3.12..."
-python3.12 -m venv "$VENV_DIR"
+if ! python3.12 -m venv "$VENV_DIR"; then
+    echo "Error: Failed to create virtual environment."
+    exit 1
+fi
 echo "Virtual environment created successfully."
 
 # Activate the virtual environment

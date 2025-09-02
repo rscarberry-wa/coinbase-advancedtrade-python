@@ -251,3 +251,7 @@ class EnhancedRESTClient(RESTClient):
     def get_account_by_currency(self, currency: str) -> Optional[Account]:
         """Show account details for a specific currency."""
         return self._account_service.get_account_by_currency(currency)
+
+    def get_order_status(self, order_id: str) -> Optional[str]:
+        """Get the status of an order."""
+        return self._order_service.get_order_status(order_id)

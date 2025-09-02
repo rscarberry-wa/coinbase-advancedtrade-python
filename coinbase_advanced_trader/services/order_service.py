@@ -295,3 +295,24 @@ class OrderService:
                         f"Preview failure reason: {preview_failure_reason}")
         
         logger.debug(f"Coinbase response: {order}")
+
+    def get_order_status(self, order_id: str) -> Optional[str]:
+        """
+        Get just the status of an order.
+        
+        Args:
+            order_id (str): The ID of the order to check.
+        
+        Returns:
+            Optional[str]: The status of the order, or None if the request failed.
+        """
+        try:
+            order_response = self.rest_client.get_order(order_id)
+            if order_response['order']:
+                order = order_response['order']
+                if order['status']:
+                    return order['status']
+            return None
+        except Exception as e:
+            logger.error(f"Error getting order status: {str(e)}")
+            return None
